@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>美金→星幣 換匯路徑試算 (滙豐台灣即期牌價)</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI","Microsoft JhengHei",sans-serif}
+body{background:#f4f5f7;color:#1d1d1d;padding:20px 14px;display:flex;justify-content:center}
+.wrap{width:100%;max-width:780px}
+h1{font-size:1.4rem;text-align:center;margin-bottom:4px}
+.sub{text-align:center;color:#6b7280;font-size:.85rem;margin-bottom:16px}
+.card{background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+.card h3{font-size:1rem;margin-bottom:10px}
+.status{padding:10px 12px;border-radius:8px;font-size:.85rem;margin-bottom:12px;line-height:1.5}
+.s-live{background:#dcfce7;color:#166534}.s-stale{background:#fef9c3;color:#854d0e}.s-manual{background:#e0e7ff;color:#3730a3}.s-load{background:#f3f4f6;color:#374151}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+label{display:block;font-size:.82rem;font-weight:600;margin-bottom:4px;color:#374151}
+input,textarea{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem}
+textarea{height:90px;font-size:.8rem;font-family:monospace}
+button{padding:10px 14px;border:none;border-radius:8px;background:#db0011;color:#fff;font-weight:600;cursor:pointer;font-size:.9rem}
+button.alt{background:#fff;color:#db0011;border:1px solid #db0011}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{background:#f9fafb;color:#4b5563}
+tr.use td{background:#fff1f2;font-weight:700}
+tr.use input{width:96px;padding:4px 6px;text-align:right;font-size:.85rem}
+.badge{display:inline-block;padding:6px 14px;border-radius:99px;font-weight:700;font-size:.9rem;margin-bottom:10px}
+.good{background:#dcfce7;color:#166534}.bad{background:#fee2e2;color:#991b1b}
+.box{background:#f3f4f6;border-radius:8px;padding:12px;font-size:.85rem;margin-top:12px;line-height:1.7}
+.note{font-size:.75rem;color:#6b7280;margin-top:8px}
+</style></head><body><div class="wrap">
+<h1>美金→星幣 換匯路徑試算</h1>
+<div class="sub">採用滙豐(台灣)「即期匯率：銀行買入 / 銀行賣出」，試算完全依下方匯率表計算</div>
+
+<div class="card">
+  <div id="status" class="status s-load">載入中…</div>
+  <div class="grid">
+    <div><label>美金金額 USD</label><input id="usd" type="number" value="500" step="any"></div>
+    <div><label>直接兌換得到的星幣 SGD</label><input id="direct" type="number" value="636.05" step="any"></div>
+  </div>
+  <div class="row">
+    <button onclick="loadRates()">重新抓取即時匯率</button>
+    <button class="alt" onclick="useSnapshot()">改用快照牌價</button>
+    <button class="alt" onclick="window.open('https://www.hsbc.com.tw/currency-rates/')">開啟滙豐官網</button>
+  </div>
+  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:.85rem;font-weight:600">手動貼上滙豐牌價表（自動抓取失敗時使用）</summary>
+    <textarea id="paste" placeholder="到滙豐官網全選牌價表複製後貼上，需含「美金 (USD)」與「新加坡幣 (SGD)」兩列"></textarea>
+    <div class="row"><button onclick="parsePaste()">解析並套用</button></div>
+  </details>
+</div>
+
+<div class="card"><h3>目前匯率資訊（滙豐台灣，單位 TWD）</h3>
+  <div class="tw"><table><thead><tr><th>幣別</th><th>即期買入</th><th>即期賣出</th><th>現金買入</th><th>現金賣出</th></tr></thead>
+  <tbody id="ratetable"></tbody></table></div>
+  <div class="note" id="ratenote"></div>
+</div>
+
+<div class="card" id="result" style="display:none"><h3>試算結果（依上表匯率）</h3>
+  <div id="badge"></div><div id="summary" style="font-size:.92rem;line-height:1.6"></div>
+  <table style="margin-top:10px"><thead><tr><th>項目</th><th>數值</th></tr></thead><tbody id="detail"></tbody></table>
+  <div class="box" id="acct"></div>
+</div>
+</div>
+
+<script>
+const SNAP={time:'2026/10/8 下午3:54',rows:{
+ 'USD 美金':[31.8505,31.9505,31.6005,32.2005],
+ 'SGD 新加坡幣':[24.78396,25.01561,null,null],
+ 'EUR 歐元':[35.48568,35.93962,35.18568,36.23962],
+ 'GBP 英鎊':[41.86079,42.36492,41.21079,43.01492],
+ 'AUD 澳幣':[22.04451,22.32181,null,null],
+ 'HKD 港幣':[4.03282,4.09738,3.93282,4.19738],
+ 'CAD 加幣':[22.28036,22.49789,null,null],
+ 'CHF 瑞士法郎':[38.14159,38.43273,null,null],
+ 'JPY 日圓':[0.1999726,0.2033406,0.1959726,0.2073406],
+ 'CNY 人民幣':[4.73443,4.78348,4.63443,4.88348]}};
+let R=null;
+const clone=o=>JSON.parse(JSON.stringify(o));
+const f=(v,d=4)=>v==null||isNaN(v)?'-':Number(v).toFixed(d);
+function setStatus(cls,msg){const s=document.getElementById('status');s.className='status '+cls;s.innerHTML=msg}
+function parseHSBC(text){
+  const grab=n=>{const m=text.match(new RegExp(n+'[^0-9]{0,40}([0-9.]+)\\s*\\|\\s*([0-9.]+)\\s*\\|\\s*([0-9.\\-]+)\\s*\\|\\s*([0-9.\\-]+)'));
+    return m?m.slice(1,5).map(x=>x==='-'?null:parseFloat(x)):null};
+  const usd=grab('美金\\s*\\(USD\\)'),sgd=grab('新加坡幣\\s*\\(SGD\\)');
+  if(!usd||!sgd)return null;
+  const t=text.match(/匯率更新日期為[:：]\s*([^\n|]+)/);
+  const rows=clone(SNAP.rows);rows['USD 美金']=usd;rows['SGD 新加坡幣']=sgd;
+  return {time:t?t[1].trim():'手動貼上',rows};
+}
+function parsePaste(){
+  const raw=document.getElementById('paste').value.replace(/\t+/g,' | ').replace(/ {2,}/g,' | ');
+  const p=parseHSBC(raw);
+  if(!p){setStatus('s-stale','貼上內容無法解析，請確認包含美金與新加坡幣兩列。');return}
+  R=p;setStatus('s-manual','手動貼上牌價（牌價時間：'+p.time+'）');render();
+}
+async function loadRates(){
+  setStatus('s-load','嘗試從滙豐官網抓取即時牌價…');
+  const target='https://www.hsbc.com.tw/currency-rates/';
+  const proxies=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
+  for(const p of proxies){
+    try{
+      const r=await fetch(p(target),{cache:'no-store'});if(!r.ok)continue;
+      const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+      const txt=[...doc.querySelectorAll('tr')].map(tr=>[...tr.children].map(c=>c.textContent.trim()).join(' | ')).join('\n')+'\n'+doc.body.innerText;
+      const parsed=parseHSBC(txt);
+      if(parsed){R=parsed;setStatus('s-live','已從滙豐官網抓取，牌價時間：'+parsed.time);render();return}
+    }catch(e){}
+  }
+  R=clone(SNAP);render();
+  setStatus('s-stale','無法自動讀取滙豐牌價（瀏覽器跨網域限制），目前顯示快照（牌價時間 '+SNAP.time+'），<b>可能不是最新</b>。請開啟滙豐官網，將牌價貼到「手動貼上」，或直接修改下表粉紅列的數字，試算會立即更新。');
+}
+function useSnapshot(){R=clone(SNAP);setStatus('s-stale','使用快照牌價（'+SNAP.time+'），可能非最新。');render()}
+function render(){
+  document.getElementById('ratetable').innerHTML=Object.entries(R.rows).map(([k,v])=>{
+    if(k.startsWith('USD')||k.startsWith('SGD')){
+      const c=i=>v[i]==null?'<td>-</td>':`<td><input class="ed" data-k="${k}" data-i="${i}" type="number" step="any" value="${v[i]}"></td>`;
+      return `<tr class="use"><td>${k}</td>${c(0)}${c(1)}${c(2)}${c(3)}</tr>`}
+    return `<tr><td>${k}</td><td>${f(v[0],5)}</td><td>${f(v[1],5)}</td><td>${f(v[2],5)}</td><td>${f(v[3],5)}</td></tr>`}).join('');
+  document.querySelectorAll('.ed').forEach(e=>e.addEventListener('input',()=>{R.rows[e.dataset.k][+e.dataset.i]=parseFloat(e.value);calc()}));
+  document.getElementById('ratenote').innerText='牌價時間：'+R.time+'。粉紅列可直接修改；試算使用 USD「即期買入」與 SGD「即期賣出」。實際成交以交易當下為準。';
+  calc();
+}
+function calc(){
+  if(!R)return;
+  const usd=+document.getElementById('usd').value,direct=+document.getElementById('direct').value;
+  const buy=R.rows['USD 美金'][0],sell=R.rows['SGD 新加坡幣'][1];
+  if(!(usd>0&&buy>0&&sell>0))return;
+  const twd=usd*buy,via=twd/sell,diff=via-direct,be=direct*sell/usd,better=via>direct;
+  document.getElementById('result').style.display='block';
+  document.getElementById('badge').innerHTML=`<span class="badge ${better?'good':'bad'}">推薦：${better?'先換台幣再買星幣':'直接美金換星幣'}</span>`;
+  document.getElementById('summary').innerHTML=better
+   ?`依 USD 買入 <b>${f(buy,5)}</b>、SGD 賣出 <b>${f(sell,5)}</b>，走台幣中轉可得 <b>${via.toFixed(2)} SGD</b>，比直接兌換多 <b>${diff.toFixed(2)} SGD</b>（約 NT$ ${(diff*sell).toFixed(1)}）。`
+   :`依 USD 買入 <b>${f(buy,5)}</b>、SGD 賣出 <b>${f(sell,5)}</b>，直接兌換 <b>${direct.toFixed(2)} SGD</b> 較佳，走台幣中轉會少 <b>${Math.abs(diff).toFixed(2)} SGD</b>（約 NT$ ${Math.abs(diff*sell).toFixed(1)}）。`;
+  const rows=[
+   ['牌價時間',R.time],
+   ['匯率①：USD 即期銀行買入（美金→台幣）',f(buy,5)],
+   ['匯率②：SGD 即期銀行賣出（台幣→星幣）',f(sell,5)],
+   ['路徑B 中轉台幣',`${usd} × ${f(buy,5)} = NT$ ${twd.toFixed(2)}`],
+   ['路徑B 最終星幣',`${twd.toFixed(2)} ÷ ${f(sell,5)} = ${via.toFixed(2)} SGD`],
+   ['路徑A 直接兌換星幣',direct.toFixed(2)+' SGD'],
+   ['差額（B − A）',(diff>=0?'+':'')+diff.toFixed(2)+' SGD'],
+   ['打平門檻（USD 買入價需高於）',f(be,4)],
+   ['路徑A 隱含 USD/SGD',f(direct/usd,4)],
+   ['路徑B 牌價隱含 USD/SGD',f(buy/sell,4)]];
+  document.getElementById('detail').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
+  const T=Math.round(twd),S=better?via:direct;
+  document.getElementById('acct').innerHTML=`<b>記帳平帳建議（台幣中轉 NT$ ${T.toLocaleString()}）</b><br>交易一：扣 ${usd.toFixed(2)} USD，入 ${T.toLocaleString()} TWD，匯率 ${(T/usd).toFixed(4)}<br>交易二：扣 ${T.toLocaleString()} TWD，入 ${S.toFixed(2)} SGD，匯率 ${(T/S).toFixed(4)}`;
+}
+['usd','direct'].forEach(id=>document.getElementById(id).addEventListener('input',calc));
+loadRates();
+</script></body></html>
