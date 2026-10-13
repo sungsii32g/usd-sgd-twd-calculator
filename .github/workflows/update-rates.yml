@@ -1,0 +1,32 @@
+name: 自動更新滙豐匯率牌價
+
+on:
+  schedule:
+    # 台灣時間週一至週五 09:00~17:00 每小時更新一次 (UTC 01:00~09:00)
+    - cron: '0 1-9 * * 1-5'
+  workflow_dispatch: # 支援手動在 GitHub Actions 點擊立即更新
+
+permissions:
+  contents: write
+
+jobs:
+  update-rates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch HSBC Taiwan Rates
+        run: node scripts/fetch_rates.js
+
+      - name: Commit and Push if Changed
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add rates.json
+          git diff --staged --quiet || (git commit -m "自動更新滙豐匯率牌價 [skip ci]" && git push)

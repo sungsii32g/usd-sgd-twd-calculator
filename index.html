@@ -1,153 +1,1046 @@
 <!DOCTYPE html>
-<html lang="zh-TW"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>美金→星幣 換匯路徑試算 (滙豐台灣即期牌價)</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,"Segoe UI","Microsoft JhengHei",sans-serif}
-body{background:#f4f5f7;color:#1d1d1d;padding:20px 14px;display:flex;justify-content:center}
-.wrap{width:100%;max-width:780px}
-h1{font-size:1.4rem;text-align:center;margin-bottom:4px}
-.sub{text-align:center;color:#6b7280;font-size:.85rem;margin-bottom:16px}
-.card{background:#fff;border:1px solid #d1d5db;border-radius:12px;padding:18px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-.card h3{font-size:1rem;margin-bottom:10px}
-.status{padding:10px 12px;border-radius:8px;font-size:.85rem;margin-bottom:12px;line-height:1.5}
-.s-live{background:#dcfce7;color:#166534}.s-stale{background:#fef9c3;color:#854d0e}.s-manual{background:#e0e7ff;color:#3730a3}.s-load{background:#f3f4f6;color:#374151}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:560px){.grid{grid-template-columns:1fr}}
-label{display:block;font-size:.82rem;font-weight:600;margin-bottom:4px;color:#374151}
-input,textarea{width:100%;padding:9px 10px;border:1px solid #d1d5db;border-radius:8px;font-size:.95rem}
-textarea{height:90px;font-size:.8rem;font-family:monospace}
-button{padding:10px 14px;border:none;border-radius:8px;background:#db0011;color:#fff;font-weight:600;cursor:pointer;font-size:.9rem}
-button.alt{background:#fff;color:#db0011;border:1px solid #db0011}
-.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.tw{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.85rem}
-th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:right}
-th:first-child,td:first-child{text-align:left}
-th{background:#f9fafb;color:#4b5563}
-tr.use td{background:#fff1f2;font-weight:700}
-tr.use input{width:96px;padding:4px 6px;text-align:right;font-size:.85rem}
-.badge{display:inline-block;padding:6px 14px;border-radius:99px;font-weight:700;font-size:.9rem;margin-bottom:10px}
-.good{background:#dcfce7;color:#166534}.bad{background:#fee2e2;color:#991b1b}
-.box{background:#f3f4f6;border-radius:8px;padding:12px;font-size:.85rem;margin-top:12px;line-height:1.7}
-.note{font-size:.75rem;color:#6b7280;margin-top:8px}
-</style></head><body><div class="wrap">
-<h1>美金→星幣 換匯路徑試算</h1>
-<div class="sub">採用滙豐(台灣)「即期匯率：銀行買入 / 銀行賣出」，試算完全依下方匯率表計算</div>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>美金→星幣 換匯路徑試算 (滙豐台灣即期牌價)</title>
+  <style>
+    :root {
+      --primary: #db0011;
+      --primary-hover: #b8000e;
+      --primary-light: #fff1f2;
+      --success: #059669;
+      --success-bg: #ecfdf5;
+      --success-border: #a7f3d0;
+      --warning: #d97706;
+      --warning-bg: #fffbeb;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+    }
 
-<div class="card">
-  <div id="status" class="status s-load">載入中…</div>
-  <div class="grid">
-    <div><label>美金金額 USD</label><input id="usd" type="number" value="500" step="any"></div>
-    <div><label>直接兌換得到的星幣 SGD</label><input id="direct" type="number" value="636.05" step="any"></div>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Microsoft JhengHei", Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 16px 48px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: 1080px;
+    }
+
+    /* Header */
+    header {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .sub {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.88rem;
+      font-weight: 500;
+    }
+
+    .status-pill.live { color: var(--success); }
+    .status-pill.stale { color: var(--warning); }
+    .status-pill.manual { color: #4338ca; }
+    .status-pill.loading { color: var(--text-muted); }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+    }
+
+    button.btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    button.btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    button.btn-outline {
+      background: #fff;
+      color: #334155;
+      border-color: var(--border);
+    }
+    button.btn-outline:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    /* Main Grid Layout */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+
+    .card:last-child {
+      margin-bottom: 0;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* Inputs */
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .label-hint {
+      font-weight: 400;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrap input {
+      width: 100%;
+      padding: 10px 14px;
+      padding-right: 56px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .input-wrap input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    }
+
+    .input-suffix {
+      position: absolute;
+      right: 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* Core Rates Box */
+    .rate-inputs-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .rate-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      transition: border-color 0.15s;
+    }
+
+    .rate-box:hover {
+      border-color: #cbd5e1;
+    }
+
+    .rate-box-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .rate-box-desc {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+
+    .rate-box input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #0f172a;
+      background: #fff;
+      outline: none;
+    }
+
+    .rate-box input:focus {
+      border-color: #db0011;
+      box-shadow: 0 0 0 2px rgba(219, 0, 17, 0.15);
+    }
+
+    /* Results Hero Card */
+    .result-card {
+      background: #ffffff;
+      border: 2px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 20px;
+    }
+
+    .result-card.better-b {
+      border-color: var(--success-border);
+      background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%);
+    }
+
+    .result-card.better-a {
+      border-color: #cbd5e1;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    }
+
+    /* Recommendation Banner */
+    .recommendation-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+
+    .recommendation-banner.good {
+      background: var(--success);
+      color: #ffffff;
+    }
+
+    .recommendation-banner.alt {
+      background: #1e293b;
+      color: #ffffff;
+    }
+
+    .rec-badge-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+    }
+
+    .rec-badge-sub {
+      font-size: 0.85rem;
+      opacity: 0.92;
+      margin-top: 2px;
+    }
+
+    .rec-tag {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* Comparison Stat Cards */
+    .stat-comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+    }
+
+    .stat-card.winner {
+      border: 2px solid var(--success);
+      background: #fafffc;
+    }
+
+    .winner-ribbon {
+      position: absolute;
+      top: -10px;
+      right: 14px;
+      background: var(--success);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 2px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.02em;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-amount {
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .stat-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Diff Alert Box */
+    .diff-box {
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .diff-box.good {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      color: #065f46;
+    }
+
+    .diff-box.bad {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+    }
+
+    /* Route Stepper */
+    .route-steps {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+    }
+
+    .route-steps-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #475569;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px dashed #e2e8f0;
+    }
+    .step-item:last-child {
+      border-bottom: none;
+    }
+
+    .step-name {
+      color: var(--text-muted);
+    }
+    .step-val {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* Accounting Box */
+    .acct-box {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 0.83rem;
+      line-height: 1.6;
+      color: #1e293b;
+      margin-bottom: 14px;
+    }
+
+    .acct-box b {
+      color: #0f172a;
+    }
+
+    /* Accordion Details */
+    details {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-top: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    summary {
+      padding: 14px 18px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #334155;
+    }
+
+    summary:hover {
+      background: #f8fafc;
+    }
+
+    .details-content {
+      padding: 16px 18px;
+      border-top: 1px solid var(--border);
+      background: #ffffff;
+    }
+
+    /* Table */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+    }
+
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+
+    th {
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
+    }
+
+    tr.highlight td {
+      background: #fff1f2;
+      font-weight: 700;
+      color: #991b1b;
+    }
+
+    tr.highlight input {
+      width: 90px;
+      padding: 4px 6px;
+      text-align: right;
+      font-size: 0.85rem;
+      border: 1px solid #f87171;
+      border-radius: 6px;
+      background: #fff;
+      font-weight: 700;
+    }
+
+    textarea {
+      width: 100%;
+      height: 90px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-family: monospace;
+      outline: none;
+      margin-bottom: 10px;
+    }
+
+    .copy-btn {
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #e2e8f0;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .copy-btn:hover { background: #cbd5e1; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <!-- Header -->
+  <header>
+    <div class="logo-badge">
+      <span>滙豐 (台灣) 即期牌價試算</span>
+    </div>
+    <h1>美金 → 星幣 換匯路徑智能試算</h1>
+    <p class="sub">即時比對「直接兌換 SGD」與「USD 換台幣中轉再買 SGD」的最佳換匯策略</p>
+  </header>
+
+  <!-- Top Status & Actions Bar -->
+  <div class="status-bar">
+    <div class="status-pill loading" id="status-pill">
+      <span class="status-indicator"></span>
+      <span id="status-text">載入即時牌價中…</span>
+    </div>
+    <div class="header-actions">
+      <button class="btn-primary" onclick="loadRates()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        重新整理牌價
+      </button>
+      <button class="btn-outline" onclick="window.open('https://www.hsbc.com.tw/currency-rates/', '_blank')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+        滙豐官網
+      </button>
+    </div>
   </div>
-  <div class="row">
-    <button onclick="loadRates()">重新抓取即時匯率</button>
-    <button class="alt" onclick="useSnapshot()">改用快照牌價</button>
-    <button class="alt" onclick="window.open('https://www.hsbc.com.tw/currency-rates/')">開啟滙豐官網</button>
+
+  <!-- Main 2-Column Dashboard (Left: Inputs & Core Rates / Right: Instant Hero Results) -->
+  <div class="dashboard-grid">
+    
+    <!-- Left Column: Inputs & Core Rates -->
+    <div class="input-column">
+      
+      <!-- Card: 試算條件輸入 -->
+      <div class="card">
+        <div class="card-title">
+          <span>試算金額與條件</span>
+          <span style="font-size: 0.78rem; font-weight: 500; color: var(--text-muted)">輸入後自動計算</span>
+        </div>
+        
+        <div class="form-group">
+          <label for="usd">
+            <span>美金金額 (USD)</span>
+            <span class="label-hint">欲換匯之美金</span>
+          </label>
+          <div class="input-wrap">
+            <input id="usd" type="number" value="500" step="any" placeholder="例如 500">
+            <span class="input-suffix">USD</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="direct">
+            <span>路徑 A：直接兌換得到之星幣 (SGD)</span>
+            <span class="label-hint">銀行/平台報給您的星幣</span>
+          </label>
+          <div class="input-wrap">
+            <input id="direct" type="number" value="636.05" step="any" placeholder="例如 636.05">
+            <span class="input-suffix">SGD</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card: 關鍵匯率快速查看與微調 -->
+      <div class="card">
+        <div class="card-title">
+          <span>滙豐台灣關鍵牌價（可直接微調）</span>
+          <button class="copy-btn" onclick="useSnapshot()" title="重置回預設牌價">重置</button>
+        </div>
+        
+        <div class="rate-inputs-grid">
+          <!-- USD 即期買入 -->
+          <div class="rate-box">
+            <div class="rate-box-title">
+              <span>美金 USD</span>
+              <span style="color: #db0011; font-weight:800">即期買入</span>
+            </div>
+            <div class="rate-box-desc">美金換台幣 (銀行買入價)</div>
+            <input id="rate-usd-buy" type="number" step="any" value="32.038">
+          </div>
+
+          <!-- SGD 即期賣出 -->
+          <div class="rate-box">
+            <div class="rate-box-title">
+              <span>新加坡幣 SGD</span>
+              <span style="color: #db0011; font-weight:800">即期賣出</span>
+            </div>
+            <div class="rate-box-desc">台幣買星幣 (銀行賣出價)</div>
+            <input id="rate-sgd-sell" type="number" step="any" value="25.176">
+          </div>
+        </div>
+
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">
+          * 試算依據上方 USD 即期買入與 SGD 即期賣出計算。修改數值右方結果會立即連動。
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Right Column: Hero Results & Recommendation (Always in View!) -->
+    <div class="result-column">
+      <div class="result-card better-b" id="result-card">
+        
+        <!-- Big Recommendation Banner -->
+        <div class="recommendation-banner good" id="rec-banner">
+          <div>
+            <div class="rec-badge-title" id="rec-title">推薦：先換台幣再買星幣</div>
+            <div class="rec-badge-sub" id="rec-sub">走台幣中轉（路徑 B）更划算</div>
+          </div>
+          <div class="rec-tag" id="rec-tag">多換 0.23 SGD</div>
+        </div>
+
+        <!-- 2 Path Comparison Stats -->
+        <div class="stat-comparison">
+          <!-- Path B Stat -->
+          <div class="stat-card winner" id="stat-b">
+            <div class="winner-ribbon" id="ribbon-b">推薦路徑</div>
+            <div class="stat-label">路徑 B (台幣中轉)</div>
+            <div class="stat-amount" id="val-b">636.28 <span style="font-size:0.9rem">SGD</span></div>
+            <div class="stat-sub" id="val-b-sub">約 NT$ 16,019</div>
+          </div>
+
+          <!-- Path A Stat -->
+          <div class="stat-card" id="stat-a">
+            <div class="winner-ribbon" id="ribbon-a" style="display:none">推薦路徑</div>
+            <div class="stat-label">路徑 A (直接換星幣)</div>
+            <div class="stat-amount" id="val-a">636.05 <span style="font-size:0.9rem">SGD</span></div>
+            <div class="stat-sub" id="val-a-sub">原始直接換匯報價</div>
+          </div>
+        </div>
+
+        <!-- Summary & Difference -->
+        <div class="diff-box good" id="diff-box">
+          依目前牌價，走台幣中轉可得 <b>636.28 SGD</b>，比直接兌換多出 <b>+0.23 SGD</b>（約等同省下 NT$ 5.8 元）。
+        </div>
+
+        <!-- Visual Route Stepper -->
+        <div class="route-steps">
+          <div class="route-steps-title">換匯路徑計算明細</div>
+          <div class="step-item">
+            <span class="step-name">路徑 B 中轉台幣 (USD × 買入價)</span>
+            <span class="step-val" id="step-b-twd">500 × 32.038 = NT$ 16,019.00</span>
+          </div>
+          <div class="step-item">
+            <span class="step-name">路徑 B 購買星幣 (TWD ÷ 賣出價)</span>
+            <span class="step-val" id="step-b-sgd">NT$ 16,019 ÷ 25.176 = 636.28 SGD</span>
+          </div>
+          <div class="step-item">
+            <span class="step-name">打平門檻（USD 買入價需高於）</span>
+            <span class="step-val" id="step-be">32.0264 TWD</span>
+          </div>
+          <div class="step-item">
+            <span class="step-name">路徑 A / B 隱含匯率 (USD/SGD)</span>
+            <span class="step-val" id="step-implied">A: 1.2721 | B: 1.2726</span>
+          </div>
+        </div>
+
+        <!-- Accounting Entry Suggestion -->
+        <div class="acct-box" id="acct-box">
+          <b>記帳平帳建議（台幣中轉 NT$ 16,019）</b><br>
+          交易一：扣 500.00 USD，入 16,019 TWD（匯率 32.0380）<br>
+          交易二：扣 16,019 TWD，入 636.28 SGD（匯率 25.1760）
+        </div>
+
+      </div>
+    </div>
+
   </div>
-  <details style="margin-top:12px"><summary style="cursor:pointer;font-size:.85rem;font-weight:600">手動貼上滙豐牌價表（自動抓取失敗時使用）</summary>
-    <textarea id="paste" placeholder="到滙豐官網全選牌價表複製後貼上，需含「美金 (USD)」與「新加坡幣 (SGD)」兩列"></textarea>
-    <div class="row"><button onclick="parsePaste()">解析並套用</button></div>
+
+  <!-- Collapsible Secondary Sections (Not blocking view) -->
+  
+  <!-- Accordion 1: 手動貼上滙豐牌價表 -->
+  <details id="details-paste">
+    <summary>
+      <span>手動貼上滙豐牌價表（備用）</span>
+      <span style="font-size:0.75rem; color:var(--text-muted)">點擊展開 ▾</span>
+    </summary>
+    <div class="details-content">
+      <p style="font-size:0.83rem; color:var(--text-muted); margin-bottom:8px;">
+        若官網改版或有專屬牌價，可到滙豐官網全選牌價表複製後貼在此處，需含「美金 (USD)」與「新加坡幣 (SGD)」兩列：
+      </p>
+      <textarea id="paste-box" placeholder="美金 (USD)  32.038  32.138 ...&#10;新加坡幣 (SGD) 24.94287 25.176 ..."></textarea>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-primary" onclick="parsePaste()">解析並套用</button>
+        <button class="btn-outline" onclick="document.getElementById('paste-box').value=''">清除</button>
+      </div>
+    </div>
   </details>
-</div>
 
-<div class="card"><h3>目前匯率資訊（滙豐台灣，單位 TWD）</h3>
-  <div class="tw"><table><thead><tr><th>幣別</th><th>即期買入</th><th>即期賣出</th><th>現金買入</th><th>現金賣出</th></tr></thead>
-  <tbody id="ratetable"></tbody></table></div>
-  <div class="note" id="ratenote"></div>
-</div>
+  <!-- Accordion 2: 滙豐台灣 11 幣別完整牌價參考表 -->
+  <details id="details-table">
+    <summary>
+      <span>滙豐台灣外幣牌價總表 (全幣別參考)</span>
+      <span style="font-size:0.75rem; color:var(--text-muted)">點擊展開 ▾</span>
+    </summary>
+    <div class="details-content">
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>幣別</th>
+              <th>即期買入</th>
+              <th>即期賣出</th>
+              <th>現金買入</th>
+              <th>現金賣出</th>
+            </tr>
+          </thead>
+          <tbody id="ratetable-body"></tbody>
+        </table>
+      </div>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-top:10px;" id="ratetable-note">
+        牌價時間：2026/10/13 下午12:43。粉紅列為 USD 與 SGD，可直接修改數值。
+      </p>
+    </div>
+  </details>
 
-<div class="card" id="result" style="display:none"><h3>試算結果（依上表匯率）</h3>
-  <div id="badge"></div><div id="summary" style="font-size:.92rem;line-height:1.6"></div>
-  <table style="margin-top:10px"><thead><tr><th>項目</th><th>數值</th></tr></thead><tbody id="detail"></tbody></table>
-  <div class="box" id="acct"></div>
-</div>
 </div>
 
 <script>
-const SNAP={time:'2026/10/8 下午3:54',rows:{
- 'USD 美金':[31.8505,31.9505,31.6005,32.2005],
- 'SGD 新加坡幣':[24.78396,25.01561,null,null],
- 'EUR 歐元':[35.48568,35.93962,35.18568,36.23962],
- 'GBP 英鎊':[41.86079,42.36492,41.21079,43.01492],
- 'AUD 澳幣':[22.04451,22.32181,null,null],
- 'HKD 港幣':[4.03282,4.09738,3.93282,4.19738],
- 'CAD 加幣':[22.28036,22.49789,null,null],
- 'CHF 瑞士法郎':[38.14159,38.43273,null,null],
- 'JPY 日圓':[0.1999726,0.2033406,0.1959726,0.2073406],
- 'CNY 人民幣':[4.73443,4.78348,4.63443,4.88348]}};
-let R=null;
-const clone=o=>JSON.parse(JSON.stringify(o));
-const f=(v,d=4)=>v==null||isNaN(v)?'-':Number(v).toFixed(d);
-function setStatus(cls,msg){const s=document.getElementById('status');s.className='status '+cls;s.innerHTML=msg}
-function parseHSBC(text){
-  const grab=n=>{const m=text.match(new RegExp(n+'[^0-9]{0,40}([0-9.]+)\\s*\\|\\s*([0-9.]+)\\s*\\|\\s*([0-9.\\-]+)\\s*\\|\\s*([0-9.\\-]+)'));
-    return m?m.slice(1,5).map(x=>x==='-'?null:parseFloat(x)):null};
-  const usd=grab('美金\\s*\\(USD\\)'),sgd=grab('新加坡幣\\s*\\(SGD\\)');
-  if(!usd||!sgd)return null;
-  const t=text.match(/匯率更新日期為[:：]\s*([^\n|]+)/);
-  const rows=clone(SNAP.rows);rows['USD 美金']=usd;rows['SGD 新加坡幣']=sgd;
-  return {time:t?t[1].trim():'手動貼上',rows};
-}
-function parsePaste(){
-  const raw=document.getElementById('paste').value.replace(/\t+/g,' | ').replace(/ {2,}/g,' | ');
-  const p=parseHSBC(raw);
-  if(!p){setStatus('s-stale','貼上內容無法解析，請確認包含美金與新加坡幣兩列。');return}
-  R=p;setStatus('s-manual','手動貼上牌價（牌價時間：'+p.time+'）');render();
-}
-async function loadRates(){
-  setStatus('s-load','嘗試從滙豐官網抓取即時牌價…');
-  const target='https://www.hsbc.com.tw/currency-rates/';
-  const proxies=[u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
-  for(const p of proxies){
-    try{
-      const r=await fetch(p(target),{cache:'no-store'});if(!r.ok)continue;
-      const doc=new DOMParser().parseFromString(await r.text(),'text/html');
-      const txt=[...doc.querySelectorAll('tr')].map(tr=>[...tr.children].map(c=>c.textContent.trim()).join(' | ')).join('\n')+'\n'+doc.body.innerText;
-      const parsed=parseHSBC(txt);
-      if(parsed){R=parsed;setStatus('s-live','已從滙豐官網抓取，牌價時間：'+parsed.time);render();return}
-    }catch(e){}
+// 內建備援快照（2026/10/13 最新牌價）
+const SNAP = {
+  time: '2026/10/13 下午12:43',
+  rows: {
+    '美金 (USD)': [32.038, 32.138, 31.788, 32.388],
+    '新加坡幣 (SGD)': [24.94287, 25.176, null, null],
+    '歐元 (EUR)': [35.61899, 36.07466, 35.31899, 36.37466],
+    '英鎊 (GBP)': [42.15627, 42.66395, 41.50627, 43.31395],
+    '澳幣 (AUD)': [22.19609, 22.47529, null, null],
+    '紐西蘭幣 (NZD)': [17.79897, 18.07741, null, null],
+    '港幣 (HKD)': [4.05638, 4.12132, 3.95638, 4.22132],
+    '加幣 (CAD)': [22.3796, 22.59809, null, null],
+    '瑞士法郎 (CHF)': [38.36531, 38.65815, null, null],
+    '日圓 (JPY)': [0.201064, 0.2044505, 0.197064, 0.2084505],
+    '人民幣 (CNY)': [4.76717, 4.81655, 4.66717, 4.91655]
   }
-  R=clone(SNAP);render();
-  setStatus('s-stale','無法自動讀取滙豐牌價（瀏覽器跨網域限制），目前顯示快照（牌價時間 '+SNAP.time+'），<b>可能不是最新</b>。請開啟滙豐官網，將牌價貼到「手動貼上」，或直接修改下表粉紅列的數字，試算會立即更新。');
+};
+
+let currentData = null;
+const clone = o => JSON.parse(JSON.stringify(o));
+const f = (v, d = 4) => v == null || isNaN(v) ? '-' : Number(v).toFixed(d);
+
+function setStatus(type, msg) {
+  const pill = document.getElementById('status-pill');
+  const txt = document.getElementById('status-text');
+  pill.className = 'status-pill ' + type;
+  txt.innerHTML = msg;
 }
-function useSnapshot(){R=clone(SNAP);setStatus('s-stale','使用快照牌價（'+SNAP.time+'），可能非最新。');render()}
-function render(){
-  document.getElementById('ratetable').innerHTML=Object.entries(R.rows).map(([k,v])=>{
-    if(k.startsWith('USD')||k.startsWith('SGD')){
-      const c=i=>v[i]==null?'<td>-</td>':`<td><input class="ed" data-k="${k}" data-i="${i}" type="number" step="any" value="${v[i]}"></td>`;
-      return `<tr class="use"><td>${k}</td>${c(0)}${c(1)}${c(2)}${c(3)}</tr>`}
-    return `<tr><td>${k}</td><td>${f(v[0],5)}</td><td>${f(v[1],5)}</td><td>${f(v[2],5)}</td><td>${f(v[3],5)}</td></tr>`}).join('');
-  document.querySelectorAll('.ed').forEach(e=>e.addEventListener('input',()=>{R.rows[e.dataset.k][+e.dataset.i]=parseFloat(e.value);calc()}));
-  document.getElementById('ratenote').innerText='牌價時間：'+R.time+'。粉紅列可直接修改；試算使用 USD「即期買入」與 SGD「即期賣出」。實際成交以交易當下為準。';
+
+// 載入牌價：優先讀取同網域由 GitHub Actions 自動維護的 rates.json
+async function loadRates() {
+  setStatus('loading', '正在載入最新牌價…');
+  try {
+    const res = await fetch('./rates.json?_t=' + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.rows && data.rows['美金 (USD)'] && data.rows['新加坡幣 (SGD)']) {
+        currentData = data;
+        setStatus('live', `已同步滙豐牌價（牌價時間：${data.time}）`);
+        applyDataToInputs();
+        renderTable();
+        calc();
+        return;
+      }
+    }
+  } catch (err) {
+    console.warn('載入 rates.json 失敗，改用內建快照', err);
+  }
+
+  // 備援：使用內建快照
+  currentData = clone(SNAP);
+  setStatus('stale', `使用快照牌價（牌價時間：${SNAP.time}）`);
+  applyDataToInputs();
+  renderTable();
   calc();
 }
-function calc(){
-  if(!R)return;
-  const usd=+document.getElementById('usd').value,direct=+document.getElementById('direct').value;
-  const buy=R.rows['USD 美金'][0],sell=R.rows['SGD 新加坡幣'][1];
-  if(!(usd>0&&buy>0&&sell>0))return;
-  const twd=usd*buy,via=twd/sell,diff=via-direct,be=direct*sell/usd,better=via>direct;
-  document.getElementById('result').style.display='block';
-  document.getElementById('badge').innerHTML=`<span class="badge ${better?'good':'bad'}">推薦：${better?'先換台幣再買星幣':'直接美金換星幣'}</span>`;
-  document.getElementById('summary').innerHTML=better
-   ?`依 USD 買入 <b>${f(buy,5)}</b>、SGD 賣出 <b>${f(sell,5)}</b>，走台幣中轉可得 <b>${via.toFixed(2)} SGD</b>，比直接兌換多 <b>${diff.toFixed(2)} SGD</b>（約 NT$ ${(diff*sell).toFixed(1)}）。`
-   :`依 USD 買入 <b>${f(buy,5)}</b>、SGD 賣出 <b>${f(sell,5)}</b>，直接兌換 <b>${direct.toFixed(2)} SGD</b> 較佳，走台幣中轉會少 <b>${Math.abs(diff).toFixed(2)} SGD</b>（約 NT$ ${Math.abs(diff*sell).toFixed(1)}）。`;
-  const rows=[
-   ['牌價時間',R.time],
-   ['匯率①：USD 即期銀行買入（美金→台幣）',f(buy,5)],
-   ['匯率②：SGD 即期銀行賣出（台幣→星幣）',f(sell,5)],
-   ['路徑B 中轉台幣',`${usd} × ${f(buy,5)} = NT$ ${twd.toFixed(2)}`],
-   ['路徑B 最終星幣',`${twd.toFixed(2)} ÷ ${f(sell,5)} = ${via.toFixed(2)} SGD`],
-   ['路徑A 直接兌換星幣',direct.toFixed(2)+' SGD'],
-   ['差額（B − A）',(diff>=0?'+':'')+diff.toFixed(2)+' SGD'],
-   ['打平門檻（USD 買入價需高於）',f(be,4)],
-   ['路徑A 隱含 USD/SGD',f(direct/usd,4)],
-   ['路徑B 牌價隱含 USD/SGD',f(buy/sell,4)]];
-  document.getElementById('detail').innerHTML=rows.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('');
-  const T=Math.round(twd),S=better?via:direct;
-  document.getElementById('acct').innerHTML=`<b>記帳平帳建議（台幣中轉 NT$ ${T.toLocaleString()}）</b><br>交易一：扣 ${usd.toFixed(2)} USD，入 ${T.toLocaleString()} TWD，匯率 ${(T/usd).toFixed(4)}<br>交易二：扣 ${T.toLocaleString()} TWD，入 ${S.toFixed(2)} SGD，匯率 ${(T/S).toFixed(4)}`;
+
+function useSnapshot() {
+  currentData = clone(SNAP);
+  setStatus('stale', `已重置為快照牌價（${SNAP.time}）`);
+  applyDataToInputs();
+  renderTable();
+  calc();
 }
-['usd','direct'].forEach(id=>document.getElementById(id).addEventListener('input',calc));
+
+function applyDataToInputs() {
+  if (!currentData || !currentData.rows) return;
+  const usdRow = currentData.rows['美金 (USD)'] || currentData.rows['USD 美金'];
+  const sgdRow = currentData.rows['新加坡幣 (SGD)'] || currentData.rows['SGD 新加坡幣'];
+  if (usdRow) document.getElementById('rate-usd-buy').value = usdRow[0];
+  if (sgdRow) document.getElementById('rate-sgd-sell').value = sgdRow[1];
+}
+
+// 渲染完整幣別表格
+function renderTable() {
+  if (!currentData || !currentData.rows) return;
+  const tbody = document.getElementById('ratetable-body');
+  tbody.innerHTML = Object.entries(currentData.rows).map(([name, vals]) => {
+    const isTarget = name.includes('USD') || name.includes('美金') || name.includes('SGD') || name.includes('新加坡幣');
+    if (isTarget) {
+      const inputCell = (idx) => vals[idx] == null ? '<td>-</td>' :
+        `<td><input class="tbl-input" data-k="${name}" data-idx="${idx}" type="number" step="any" value="${vals[idx]}"></td>`;
+      return `<tr class="highlight"><td>${name}</td>${inputCell(0)}${inputCell(1)}${inputCell(2)}${inputCell(3)}</tr>`;
+    }
+    return `<tr><td>${name}</td><td>${f(vals[0], 5)}</td><td>${f(vals[1], 5)}</td><td>${f(vals[2], 5)}</td><td>${f(vals[3], 5)}</td></tr>`;
+  }).join('');
+
+  document.querySelectorAll('.tbl-input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const k = e.target.dataset.k;
+      const idx = +e.target.dataset.idx;
+      currentData.rows[k][idx] = parseFloat(e.target.value) || 0;
+      applyDataToInputs();
+      calc();
+    });
+  });
+
+  document.getElementById('ratetable-note').innerText =
+    `牌價時間：${currentData.time}。粉紅列可直接修改；試算使用 USD「即期買入」與 SGD「即期賣出」。`;
+}
+
+// 解析手動貼上牌價
+function parsePaste() {
+  const text = document.getElementById('paste-box').value.replace(/\t+/g, ' | ').replace(/ {2,}/g, ' | ');
+  const grab = n => {
+    const m = text.match(new RegExp(n + '[^0-9]{0,40}([0-9.]+)\\s*\\|\\s*([0-9.]+)\\s*\\|\\s*([0-9.\\-]+)\\s*\\|\\s*([0-9.\\-]+)'));
+    return m ? m.slice(1, 5).map(x => x === '-' ? null : parseFloat(x)) : null;
+  };
+  const usd = grab('美金\\s*\\(USD\\)') || grab('USD');
+  const sgd = grab('新加坡幣\\s*\\(SGD\\)') || grab('SGD');
+
+  if (!usd || !sgd) {
+    alert('貼上內容無法解析，請確認包含美金與新加坡幣兩列。');
+    return;
+  }
+
+  const timeMatch = text.match(/匯率更新日期為[:：]\s*([^\n|]+)/);
+  currentData = clone(SNAP);
+  currentData.rows['美金 (USD)'] = usd;
+  currentData.rows['新加坡幣 (SGD)'] = sgd;
+  currentData.time = timeMatch ? timeMatch[1].trim() : '手動貼上 ' + new Date().toLocaleTimeString('zh-TW');
+
+  setStatus('manual', `手動貼上牌價（牌價時間：${currentData.time}）`);
+  applyDataToInputs();
+  renderTable();
+  calc();
+  alert('手動牌價解析成功並已套用！');
+}
+
+// 核心計算與結果展示
+function calc() {
+  const usd = parseFloat(document.getElementById('usd').value);
+  const direct = parseFloat(document.getElementById('direct').value);
+  const buy = parseFloat(document.getElementById('rate-usd-buy').value);
+  const sell = parseFloat(document.getElementById('rate-sgd-sell').value);
+
+  if (!(usd > 0 && buy > 0 && sell > 0 && direct > 0)) {
+    return;
+  }
+
+  // 路徑 B：USD -> TWD -> SGD
+  const twd = usd * buy;
+  const via = twd / sell;
+  const diff = via - direct;
+  const twdDiff = diff * sell;
+  const be = (direct * sell) / usd; // 打平門檻：USD 買入價需高於
+  const better = via > direct;
+
+  // 卡片外觀與橫幅更新
+  const card = document.getElementById('result-card');
+  const banner = document.getElementById('rec-banner');
+  const recTitle = document.getElementById('rec-title');
+  const recSub = document.getElementById('rec-sub');
+  const recTag = document.getElementById('rec-tag');
+  const ribbonB = document.getElementById('ribbon-b');
+  const ribbonA = document.getElementById('ribbon-a');
+  const statB = document.getElementById('stat-b');
+  const statA = document.getElementById('stat-a');
+  const diffBox = document.getElementById('diff-box');
+
+  if (better) {
+    card.className = 'result-card better-b';
+    banner.className = 'recommendation-banner good';
+    recTitle.innerHTML = '🎉 強烈推薦：先換台幣再買星幣 (路徑 B)';
+    recSub.innerText = '依目前滙豐牌價，走台幣中轉明顯更優';
+    recTag.innerText = `多換 +${diff.toFixed(2)} SGD`;
+
+    statB.className = 'stat-card winner';
+    statA.className = 'stat-card';
+    ribbonB.style.display = 'block';
+    ribbonA.style.display = 'none';
+
+    diffBox.className = 'diff-box good';
+    diffBox.innerHTML = `🌟 <b>中轉台幣更划算！</b>走台幣中轉可得 <b>${via.toFixed(2)} SGD</b>，比直接兌換多出 <b>+${diff.toFixed(2)} SGD</b>（約等同多賺 <b>NT$ ${twdDiff.toFixed(1)} 元</b>）。`;
+  } else {
+    card.className = 'result-card better-a';
+    banner.className = 'recommendation-banner alt';
+    recTitle.innerHTML = '🎯 推薦：直接美金換星幣 (路徑 A)';
+    recSub.innerText = '直接兌換得到的星幣較多，不建議中轉台幣';
+    recTag.innerText = `多換 +${Math.abs(diff).toFixed(2)} SGD`;
+
+    statB.className = 'stat-card';
+    statA.className = 'stat-card winner';
+    ribbonB.style.display = 'none';
+    ribbonA.style.display = 'block';
+
+    diffBox.className = 'diff-box bad';
+    diffBox.innerHTML = `⚠️ <b>直接兌換較佳！</b>直接兌換 <b>${direct.toFixed(2)} SGD</b> 較優，走台幣中轉反而少 <b>${Math.abs(diff).toFixed(2)} SGD</b>（約短少 <b>NT$ ${Math.abs(twdDiff).toFixed(1)} 元</b>）。`;
+  }
+
+  // 數值顯示
+  document.getElementById('val-b').innerHTML = `${via.toFixed(2)} <span style="font-size:0.9rem">SGD</span>`;
+  document.getElementById('val-b-sub').innerText = `中轉台幣 NT$ ${Math.round(twd).toLocaleString()}`;
+  document.getElementById('val-a').innerHTML = `${direct.toFixed(2)} <span style="font-size:0.9rem">SGD</span>`;
+
+  // 流程步驟明細
+  document.getElementById('step-b-twd').innerText = `${usd} × ${f(buy, 4)} = NT$ ${twd.toFixed(2)}`;
+  document.getElementById('step-b-sgd').innerText = `NT$ ${twd.toFixed(2)} ÷ ${f(sell, 4)} = ${via.toFixed(2)} SGD`;
+  document.getElementById('step-be').innerText = `${f(be, 4)} TWD (低於此價則直接換較優)`;
+  document.getElementById('step-implied').innerText = `A: ${f(direct/usd, 4)} | B: ${f(buy/sell, 4)}`;
+
+  // 記帳建議
+  const T = Math.round(twd);
+  const S = better ? via : direct;
+  document.getElementById('acct-box').innerHTML = `
+    <b>記帳平帳分錄建議（台幣中轉 NT$ ${T.toLocaleString()}）</b><br>
+    交易①：扣 <b>${usd.toFixed(2)} USD</b>，入 <b>NT$ ${T.toLocaleString()} TWD</b>（折合匯率 ${(T/usd).toFixed(4)}）<br>
+    交易②：扣 <b>NT$ ${T.toLocaleString()} TWD</b>，入 <b>${S.toFixed(2)} SGD</b>（折合匯率 ${(T/S).toFixed(4)}）
+  `;
+}
+
+// 事件監聽
+['usd', 'direct', 'rate-usd-buy', 'rate-sgd-sell'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', calc);
+});
+
+// 啟動
 loadRates();
-</script></body></html>
+</script>
+</body>
+</html>
