@@ -745,7 +745,7 @@
               <span style="color: #db0011; font-weight:800">即期買入</span>
             </div>
             <div class="rate-box-desc">美金換台幣 (銀行買入價)</div>
-            <input id="rate-usd-buy" type="number" step="any" value="32.17">
+            <input id="rate-usd-buy" type="number" step="any" value="32.105">
           </div>
 
           <!-- SGD 即期賣出 -->
@@ -755,7 +755,7 @@
               <span style="color: #db0011; font-weight:800">即期賣出</span>
             </div>
             <div class="rate-box-desc">台幣買星幣 (銀行賣出價)</div>
-            <input id="rate-sgd-sell" type="number" step="any" value="25.27799">
+            <input id="rate-sgd-sell" type="number" step="any" value="25.2203">
           </div>
         </div>
 
@@ -878,7 +878,7 @@
         </table>
       </div>
       <p style="font-size:0.75rem; color:var(--text-muted); margin-top:10px;" id="ratetable-note">
-        牌價時間：2026/10/14 上午9:43。粉紅列為 USD 與 SGD，可直接修改數值。
+        牌價時間：2026/10/14 下午2:34。粉紅列為 USD 與 SGD，可直接修改數值。
       </p>
     </div>
   </details>
@@ -888,20 +888,20 @@
 <script>
 // 內建備援快照（2026/10/14 最新牌價）
 const SNAP = {
-  time: '2026/10/14 下午1:33',
-  updatedAt: '2026-10-14T05:37:55.863Z',
+  time: '2026/10/14 下午2:34',
+  updatedAt: '2026-10-14T06:40:14.416Z',
   rows: {
-    '美金 (USD)': [32.17, 32.27, 31.92, 32.52],
-    '新加坡幣 (SGD)': [25.04391, 25.27799, null, null],
-    '歐元 (EUR)': [35.88108, 36.34012, 35.58108, 36.64012],
-    '英鎊 (GBP)': [42.51289, 43.02486, 41.86289, 43.67486],
-    '澳幣 (AUD)': [22.42188, 22.70391, null, null],
-    '紐西蘭幣 (NZD)': [17.98152, 18.26283, null, null],
-    '港幣 (HKD)': [4.07277, 4.13797, 3.97277, 4.23797],
-    '加幣 (CAD)': [22.57879, 22.79922, null, null],
-    '瑞士法郎 (CHF)': [38.57964, 38.87409, null, null],
-    '日圓 (JPY)': [0.2018389, 0.2052384, 0.1978389, 0.2092384],
-    '人民幣 (CNY)': [4.79043, 4.84005, 4.69043, 4.94005]
+    '美金 (USD)': [32.105, 32.205, 31.855, 32.455],
+    '新加坡幣 (SGD)': [24.98675, 25.2203, null, null],
+    '歐元 (EUR)': [35.81, 36.26808, 35.51, 36.56808],
+    '英鎊 (GBP)': [42.40411, 42.91478, 41.75411, 43.56478],
+    '澳幣 (AUD)': [22.36866, 22.65002, null, null],
+    '紐西蘭幣 (NZD)': [17.93216, 18.2127, null, null],
+    '港幣 (HKD)': [4.06466, 4.12973, 3.96466, 4.22973],
+    '加幣 (CAD)': [22.52721, 22.74714, null, null],
+    '瑞士法郎 (CHF)': [38.49857, 38.7924, null, null],
+    '日圓 (JPY)': [0.2014329, 0.2048256, 0.1974329, 0.2088256],
+    '人民幣 (CNY)': [4.77991, 4.82942, 4.67991, 4.92942]
   }
 };
 
@@ -909,6 +909,20 @@ let currentData = null;
 let isRefreshing = false;
 const clone = o => JSON.parse(JSON.stringify(o));
 const f = (v, d = 4) => v == null || isNaN(v) ? '-' : Number(v).toFixed(d);
+
+// 解析台灣銀行牌價時間字串為毫秒數，確保精確比較版本新舊
+function parseTaiwanTime(str) {
+  if (!str) return 0;
+  const m = str.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\s*(上午|下午)?\s*(\d{1,2}):(\d{1,2})/);
+  if (m) {
+    let [_, y, mo, d, ampm, h, min] = m;
+    h = parseInt(h, 10);
+    if (ampm === '下午' && h < 12) h += 12;
+    if (ampm === '上午' && h === 12) h = 0;
+    return new Date(y, parseInt(mo, 10) - 1, d, h, parseInt(min, 10)).getTime();
+  }
+  return Date.parse(str) || 0;
+}
 
 function setStatus(type, msg) {
   const pill = document.getElementById('status-pill');
@@ -935,14 +949,26 @@ function showToast(msg) {
   }, 3500);
 }
 
-// 直連滙豐台灣官網抓取即時牌價（透過高可用開放 CORS 鏡像，免等待 GitHub 週期）
+// 直連滙豐台灣官網抓取即時牌價（穿透 CDN 與瀏覽器快取，取得當下最新盤中匯率）
 async function fetchLiveFromHsbc() {
   try {
+    const t = Date.now();
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7500);
-    const res = await fetch('https://r.jina.ai/https://www.hsbc.com.tw/zh-tw/currency-rates/', {
+    const timer = setTimeout(() => controller.abort(), 12000);
+    
+    // 加上唯一時間戳記與 no-cache 標頭，強制穿透代理快取，取得滙豐官網即時內容
+    const targetUrl = `https://www.hsbc.com.tw/zh-tw/currency-rates/?_t=${t}`;
+    const proxyUrl = `https://r.jina.ai/${targetUrl}`;
+
+    const res = await fetch(proxyUrl, {
       signal: controller.signal,
-      headers: { 'Accept': 'text/plain,text/markdown,*/*' }
+      cache: 'no-store',
+      headers: {
+        'Accept': 'text/plain,text/markdown,*/*',
+        'X-No-Cache': 'true',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
     });
     clearTimeout(timer);
     if (!res.ok) return null;
@@ -993,40 +1019,54 @@ async function fetchLiveFromHsbc() {
   return null;
 }
 
-// 多端來源即時抓取：優先即時連線滙豐官網，並備援讀取倉庫 rates.json
+// 多端來源即時抓取：同時嘗試 (1) 官網即時穿透爬蟲 與 (2) 倉庫 rates.json，並自動選取最新牌價
 async function fetchRatesFromNetwork() {
   const t = Date.now();
 
-  // 1. 優先嘗試即時連線滙豐官網取得最新盤中匯率
-  const liveData = await fetchLiveFromHsbc();
-  if (liveData) return liveData;
-
-  // 2. 備援讀取本地與 GitHub 倉庫存檔
   const endpoints = [
     `./rates.json?_t=${t}`,
     `https://raw.githubusercontent.com/sungsii32g/usd-sgd-twd-calculator/main/rates.json?_t=${t}`
   ];
 
-  let bestData = null;
-  for (const url of endpoints) {
-    try {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.rows && data.rows['美金 (USD)'] && data.rows['新加坡幣 (SGD)']) {
-          data.isLive = false;
-          data.source = '雲端存檔';
-          if (!bestData || (data.updatedAt && (!bestData.updatedAt || new Date(data.updatedAt) > new Date(bestData.updatedAt)))) {
-            bestData = data;
+  const fetchCached = async () => {
+    let best = null;
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.rows && data.rows['美金 (USD)'] && data.rows['新加坡幣 (SGD)']) {
+            data.isLive = false;
+            data.source = '雲端存檔';
+            if (!best || parseTaiwanTime(data.time) > parseTaiwanTime(best.time)) {
+              best = data;
+            }
           }
         }
-      }
-    } catch (err) {
-      console.warn(`[牌價載入] 端點 ${url} 回傳例外:`, err.message);
+      } catch (_) {}
+    }
+    return best;
+  };
+
+  // 同時發起：官網穿透即時爬取 與 倉庫備援存檔
+  const [liveResult, cachedResult] = await Promise.allSettled([
+    fetchLiveFromHsbc(),
+    fetchCached()
+  ]);
+
+  const liveData = liveResult.status === 'fulfilled' ? liveResult.value : null;
+  const cachedData = cachedResult.status === 'fulfilled' ? cachedResult.value : null;
+
+  // 比較牌價發佈時間，擇最新者
+  if (liveData && cachedData) {
+    if (parseTaiwanTime(liveData.time) >= parseTaiwanTime(cachedData.time)) {
+      return liveData;
+    } else {
+      return cachedData;
     }
   }
 
-  return bestData;
+  return liveData || cachedData;
 }
 
 // 載入牌價
@@ -1048,7 +1088,7 @@ async function loadRates(manual = false) {
   let data = await fetchRatesFromNetwork();
 
   // 若快照比網路回應更即時，採用最新者
-  if (SNAP.updatedAt && (!data || (data.updatedAt && new Date(SNAP.updatedAt) > new Date(data.updatedAt)))) {
+  if (SNAP && (!data || parseTaiwanTime(SNAP.time) > parseTaiwanTime(data.time))) {
     data = clone(SNAP);
     data.source = '內建快照';
   }
