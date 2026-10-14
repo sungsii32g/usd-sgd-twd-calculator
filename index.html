@@ -155,6 +155,50 @@
       color: #0f172a;
     }
 
+    /* Micro Animations & Feedback */
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .spin {
+      animation: spin 0.75s linear infinite;
+    }
+
+    .last-check-badge {
+      font-size: 0.76rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 6px;
+      padding-left: 6px;
+      border-left: 1px solid var(--border);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto;
+    }
+
     /* Main Grid Layout */
     .dashboard-grid {
       display: grid;
@@ -619,9 +663,9 @@
       <span id="status-text">載入即時牌價中…</span>
     </div>
     <div class="header-actions">
-      <button class="btn-primary" onclick="loadRates()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
-        重新整理牌價
+      <button class="btn-primary" id="btn-refresh" onclick="loadRates(true)">
+        <svg id="refresh-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+        <span id="refresh-text">重新整理牌價</span>
       </button>
       <button class="btn-outline" onclick="window.open('https://www.hsbc.com.tw/currency-rates/', '_blank')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
@@ -681,7 +725,7 @@
               <span style="color: #db0011; font-weight:800">即期買入</span>
             </div>
             <div class="rate-box-desc">美金換台幣 (銀行買入價)</div>
-            <input id="rate-usd-buy" type="number" step="any" value="32.038">
+            <input id="rate-usd-buy" type="number" step="any" value="32.158">
           </div>
 
           <!-- SGD 即期賣出 -->
@@ -691,7 +735,7 @@
               <span style="color: #db0011; font-weight:800">即期賣出</span>
             </div>
             <div class="rate-box-desc">台幣買星幣 (銀行賣出價)</div>
-            <input id="rate-sgd-sell" type="number" step="any" value="25.176">
+            <input id="rate-sgd-sell" type="number" step="any" value="25.28002">
           </div>
         </div>
 
@@ -814,7 +858,7 @@
         </table>
       </div>
       <p style="font-size:0.75rem; color:var(--text-muted); margin-top:10px;" id="ratetable-note">
-        牌價時間：2026/10/13 下午12:43。粉紅列為 USD 與 SGD，可直接修改數值。
+        牌價時間：2026/10/14 上午9:43。粉紅列為 USD 與 SGD，可直接修改數值。
       </p>
     </div>
   </details>
@@ -822,25 +866,27 @@
 </div>
 
 <script>
-// 內建備援快照（2026/10/13 最新牌價）
+// 內建備援快照（2026/10/14 最新牌價）
 const SNAP = {
-  time: '2026/10/13 下午12:43',
+  time: '2026/10/14 上午9:43',
+  updatedAt: '2026-10-14T01:46:51.162Z',
   rows: {
-    '美金 (USD)': [32.038, 32.138, 31.788, 32.388],
-    '新加坡幣 (SGD)': [24.94287, 25.176, null, null],
-    '歐元 (EUR)': [35.61899, 36.07466, 35.31899, 36.37466],
-    '英鎊 (GBP)': [42.15627, 42.66395, 41.50627, 43.31395],
-    '澳幣 (AUD)': [22.19609, 22.47529, null, null],
-    '紐西蘭幣 (NZD)': [17.79897, 18.07741, null, null],
-    '港幣 (HKD)': [4.05638, 4.12132, 3.95638, 4.22132],
-    '加幣 (CAD)': [22.3796, 22.59809, null, null],
-    '瑞士法郎 (CHF)': [38.36531, 38.65815, null, null],
-    '日圓 (JPY)': [0.201064, 0.2044505, 0.197064, 0.2084505],
-    '人民幣 (CNY)': [4.76717, 4.81655, 4.66717, 4.91655]
+    '美金 (USD)': [32.158, 32.258, 31.908, 32.508],
+    '新加坡幣 (SGD)': [25.04593, 25.28002, null, null],
+    '歐元 (EUR)': [35.85846, 36.31716, 35.55846, 36.61716],
+    '英鎊 (GBP)': [42.45895, 42.97029, 41.80895, 43.62029],
+    '澳幣 (AUD)': [22.37063, 22.65204, null, null],
+    '紐西蘭幣 (NZD)': [17.96221, 18.24322, null, null],
+    '港幣 (HKD)': [4.07012, 4.13528, 3.97012, 4.23528],
+    '加幣 (CAD)': [22.56116, 22.78143, null, null],
+    '瑞士法郎 (CHF)': [38.54627, 38.84048, null, null],
+    '日圓 (JPY)': [0.2015879, 0.204983, 0.1975879, 0.208983],
+    '人民幣 (CNY)': [4.7853, 4.83487, 4.6853, 4.93487]
   }
 };
 
 let currentData = null;
+let isRefreshing = false;
 const clone = o => JSON.parse(JSON.stringify(o));
 const f = (v, d = 4) => v == null || isNaN(v) ? '-' : Number(v).toFixed(d);
 
@@ -851,33 +897,118 @@ function setStatus(type, msg) {
   txt.innerHTML = msg;
 }
 
-// 載入牌價：優先讀取同網域由 GitHub Actions 自動維護的 rates.json
-async function loadRates() {
-  setStatus('loading', '正在載入最新牌價…');
-  try {
-    const res = await fetch('./rates.json?_t=' + Date.now());
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.rows && data.rows['美金 (USD)'] && data.rows['新加坡幣 (SGD)']) {
-        currentData = data;
-        setStatus('live', `已同步滙豐牌價（牌價時間：${data.time}）`);
-        applyDataToInputs();
-        renderTable();
-        calc();
-        return;
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.className = 'toast';
+    document.body.appendChild(t);
+  }
+  t.innerHTML = msg;
+  t.style.display = 'flex';
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => { if (!t.classList.contains('show')) t.style.display = 'none'; }, 300);
+  }, 3200);
+}
+
+// 多端來源即時抓取：優先讀取本地/同網域 rates.json，並支援 GitHub Raw（具備開放 CORS，本地 file:/// 也能即時抓取）
+async function fetchRatesFromNetwork() {
+  const t = Date.now();
+  const endpoints = [
+    `./rates.json?_t=${t}`,
+    `https://raw.githubusercontent.com/sungsii32g/usd-sgd-twd-calculator/main/rates.json?_t=${t}`
+  ];
+
+  let bestData = null;
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.rows && data.rows['美金 (USD)'] && data.rows['新加坡幣 (SGD)']) {
+          // 選取較新的 updatedAt
+          if (!bestData || (data.updatedAt && (!bestData.updatedAt || new Date(data.updatedAt) > new Date(bestData.updatedAt)))) {
+            bestData = data;
+          }
+        }
       }
+    } catch (err) {
+      console.warn(`[牌價載入] 端點 ${url} 回傳例外:`, err.message);
     }
-  } catch (err) {
-    console.warn('載入 rates.json 失敗，改用內建快照', err);
   }
 
-  // 備援：使用內建快照
-  currentData = clone(SNAP);
-  setStatus('stale', `使用快照牌價（牌價時間：${SNAP.time}）`);
-  applyDataToInputs();
-  renderTable();
-  calc();
+  return bestData;
 }
+
+// 載入牌價
+async function loadRates(manual = false) {
+  if (isRefreshing) return;
+  isRefreshing = true;
+
+  const btn = document.getElementById('btn-refresh');
+  const icon = document.getElementById('refresh-icon');
+  const text = document.getElementById('refresh-text');
+
+  if (icon) icon.classList.add('spin');
+  if (text) text.innerText = '同步中…';
+  if (btn) btn.disabled = true;
+
+  setStatus('loading', '正在同步最新牌價…');
+
+  const previousTime = currentData ? currentData.time : null;
+  let data = await fetchRatesFromNetwork();
+
+  // 若快照比網路回應更即時，採用最新者
+  if (SNAP.updatedAt && (!data || (data.updatedAt && new Date(SNAP.updatedAt) > new Date(data.updatedAt)))) {
+    data = clone(SNAP);
+  }
+
+  const checkTime = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+  if (data) {
+    const isNewer = previousTime && data.time !== previousTime;
+    currentData = data;
+    setStatus('live', `已同步滙豐牌價（牌價時間：${data.time}）<span class="last-check-badge">最後檢查 ${checkTime}</span>`);
+    applyDataToInputs();
+    renderTable();
+    calc();
+
+    if (manual) {
+      if (isNewer) {
+        showToast(`🎉 成功更新至最新牌價！（牌價時間：${data.time}）`);
+      } else {
+        showToast(`✓ 已連線確認為最新牌價（牌價時間：${data.time}）`);
+      }
+    }
+  } else {
+    // 備援：使用內建快照
+    if (!currentData) {
+      currentData = clone(SNAP);
+      applyDataToInputs();
+      renderTable();
+      calc();
+    }
+    setStatus('stale', `使用快照牌價（牌價時間：${SNAP.time}）<span class="last-check-badge">最後檢查 ${checkTime}</span>`);
+    if (manual) {
+      showToast('⚠️ 網路同步失敗，目前顯示內建快照牌價');
+    }
+  }
+
+  if (icon) icon.classList.remove('spin');
+  if (text) text.innerText = '重新整理牌價';
+  if (btn) btn.disabled = false;
+  isRefreshing = false;
+}
+
+// 每 5 分鐘自動在背景確認是否有新牌價
+setInterval(() => {
+  loadRates(false);
+}, 5 * 60 * 1000);
 
 function useSnapshot() {
   currentData = clone(SNAP);

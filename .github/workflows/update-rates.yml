@@ -2,8 +2,10 @@ name: 自動更新滙豐匯率牌價
 
 on:
   schedule:
-    # 台灣時間週一至週五 09:00~17:00 每小時更新一次 (UTC 01:00~09:00)
-    - cron: '0 1-9 * * 1-5'
+    # 台灣時間週一至週五 08:50 (開盤前) 與 09:00~17:45 每 15 分鐘自動更新一次
+    # UTC 00:50 以及 UTC 01:00~09:45
+    - cron: '50 0 * * 1-5'
+    - cron: '*/15 1-9 * * 1-5'
   workflow_dispatch: # 支援手動在 GitHub Actions 點擊立即更新
 
 permissions:
@@ -29,4 +31,11 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add rates.json
-          git diff --staged --quiet || (git commit -m "自動更新滙豐匯率牌價 [skip ci]" && git push)
+          if ! git diff --staged --quiet; then
+            git commit -m "自動更新滙豐匯率牌價"
+            git pull --rebase origin main
+            git push origin main
+          else
+            echo "牌價無變動，略過 commit"
+          fi
+
