@@ -173,6 +173,26 @@
       border-left: 1px solid var(--border);
     }
 
+    .source-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 1px 6px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.12);
+      color: #059669;
+      margin-left: 6px;
+    }
+    .source-badge.cloud {
+      background: rgba(59, 130, 246, 0.12);
+      color: #2563eb;
+    }
+    .source-badge.snap {
+      background: rgba(245, 158, 11, 0.12);
+      color: #d97706;
+    }
+
     .toast {
       position: fixed;
       bottom: 24px;
@@ -725,7 +745,7 @@
               <span style="color: #db0011; font-weight:800">即期買入</span>
             </div>
             <div class="rate-box-desc">美金換台幣 (銀行買入價)</div>
-            <input id="rate-usd-buy" type="number" step="any" value="32.158">
+            <input id="rate-usd-buy" type="number" step="any" value="32.17">
           </div>
 
           <!-- SGD 即期賣出 -->
@@ -735,7 +755,7 @@
               <span style="color: #db0011; font-weight:800">即期賣出</span>
             </div>
             <div class="rate-box-desc">台幣買星幣 (銀行賣出價)</div>
-            <input id="rate-sgd-sell" type="number" step="any" value="25.28002">
+            <input id="rate-sgd-sell" type="number" step="any" value="25.27799">
           </div>
         </div>
 
@@ -868,20 +888,20 @@
 <script>
 // 內建備援快照（2026/10/14 最新牌價）
 const SNAP = {
-  time: '2026/10/14 上午9:43',
-  updatedAt: '2026-10-14T01:46:51.162Z',
+  time: '2026/10/14 下午1:33',
+  updatedAt: '2026-10-14T05:37:55.863Z',
   rows: {
-    '美金 (USD)': [32.158, 32.258, 31.908, 32.508],
-    '新加坡幣 (SGD)': [25.04593, 25.28002, null, null],
-    '歐元 (EUR)': [35.85846, 36.31716, 35.55846, 36.61716],
-    '英鎊 (GBP)': [42.45895, 42.97029, 41.80895, 43.62029],
-    '澳幣 (AUD)': [22.37063, 22.65204, null, null],
-    '紐西蘭幣 (NZD)': [17.96221, 18.24322, null, null],
-    '港幣 (HKD)': [4.07012, 4.13528, 3.97012, 4.23528],
-    '加幣 (CAD)': [22.56116, 22.78143, null, null],
-    '瑞士法郎 (CHF)': [38.54627, 38.84048, null, null],
-    '日圓 (JPY)': [0.2015879, 0.204983, 0.1975879, 0.208983],
-    '人民幣 (CNY)': [4.7853, 4.83487, 4.6853, 4.93487]
+    '美金 (USD)': [32.17, 32.27, 31.92, 32.52],
+    '新加坡幣 (SGD)': [25.04391, 25.27799, null, null],
+    '歐元 (EUR)': [35.88108, 36.34012, 35.58108, 36.64012],
+    '英鎊 (GBP)': [42.51289, 43.02486, 41.86289, 43.67486],
+    '澳幣 (AUD)': [22.42188, 22.70391, null, null],
+    '紐西蘭幣 (NZD)': [17.98152, 18.26283, null, null],
+    '港幣 (HKD)': [4.07277, 4.13797, 3.97277, 4.23797],
+    '加幣 (CAD)': [22.57879, 22.79922, null, null],
+    '瑞士法郎 (CHF)': [38.57964, 38.87409, null, null],
+    '日圓 (JPY)': [0.2018389, 0.2052384, 0.1978389, 0.2092384],
+    '人民幣 (CNY)': [4.79043, 4.84005, 4.69043, 4.94005]
   }
 };
 
@@ -912,26 +932,90 @@ function showToast(msg) {
   t._timer = setTimeout(() => {
     t.classList.remove('show');
     setTimeout(() => { if (!t.classList.contains('show')) t.style.display = 'none'; }, 300);
-  }, 3200);
+  }, 3500);
 }
 
-// 多端來源即時抓取：優先讀取本地/同網域 rates.json，並支援 GitHub Raw（具備開放 CORS，本地 file:/// 也能即時抓取）
+// 直連滙豐台灣官網抓取即時牌價（透過高可用開放 CORS 鏡像，免等待 GitHub 週期）
+async function fetchLiveFromHsbc() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7500);
+    const res = await fetch('https://r.jina.ai/https://www.hsbc.com.tw/zh-tw/currency-rates/', {
+      signal: controller.signal,
+      headers: { 'Accept': 'text/plain,text/markdown,*/*' }
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const text = await res.text();
+    const dateMatch = text.match(/匯率更新日期為[:：](?:&nbsp;|\s)*([^\n<]+)/) ||
+                      text.match(/最新更新[:：]?\s*([0-9\/\s,:]+)/i) ||
+                      text.match(/Latest update[:：]?\s*([0-9\/\s,:]+)/i);
+    const updateTime = dateMatch ? dateMatch[1].trim() : null;
+
+    const rows = {};
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('|') && line.includes('(')) {
+        const parts = line.split('|').map(s => s.trim()).filter(Boolean);
+        if (parts.length >= 5) {
+          const name = parts[0];
+          let std = name;
+          if (name.includes('USD') || name.includes('美金')) std = '美金 (USD)';
+          else if (name.includes('SGD') || name.includes('新加坡幣')) std = '新加坡幣 (SGD)';
+          else if (name.includes('EUR') || name.includes('歐元')) std = '歐元 (EUR)';
+          else if (name.includes('GBP') || name.includes('英鎊')) std = '英鎊 (GBP)';
+          else if (name.includes('AUD') || name.includes('澳幣')) std = '澳幣 (AUD)';
+          else if (name.includes('NZD') || name.includes('紐西蘭幣')) std = '紐西蘭幣 (NZD)';
+          else if (name.includes('HKD') || name.includes('港幣')) std = '港幣 (HKD)';
+          else if (name.includes('CAD') || name.includes('加幣')) std = '加幣 (CAD)';
+          else if (name.includes('CHF') || name.includes('瑞士法郎')) std = '瑞士法郎 (CHF)';
+          else if (name.includes('JPY') || name.includes('日圓')) std = '日圓 (JPY)';
+          else if (name.includes('CNY') || name.includes('人民幣')) std = '人民幣 (CNY)';
+
+          const vals = parts.slice(1, 5).map(v => (v === '-' || !v || isNaN(v)) ? null : parseFloat(v));
+          if (vals.some(v => v !== null)) rows[std] = vals;
+        }
+      }
+    }
+
+    if (rows['美金 (USD)'] && rows['新加坡幣 (SGD)']) {
+      return {
+        time: updateTime || '滙豐官網即時牌價',
+        updatedAt: new Date().toISOString(),
+        isLive: true,
+        source: '官網即時',
+        rows
+      };
+    }
+  } catch (err) {
+    console.warn('[即時直連] 無法直接讀取滙豐官網:', err.message);
+  }
+  return null;
+}
+
+// 多端來源即時抓取：優先即時連線滙豐官網，並備援讀取倉庫 rates.json
 async function fetchRatesFromNetwork() {
   const t = Date.now();
+
+  // 1. 優先嘗試即時連線滙豐官網取得最新盤中匯率
+  const liveData = await fetchLiveFromHsbc();
+  if (liveData) return liveData;
+
+  // 2. 備援讀取本地與 GitHub 倉庫存檔
   const endpoints = [
     `./rates.json?_t=${t}`,
     `https://raw.githubusercontent.com/sungsii32g/usd-sgd-twd-calculator/main/rates.json?_t=${t}`
   ];
 
   let bestData = null;
-
   for (const url of endpoints) {
     try {
       const res = await fetch(url, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (data && data.rows && data.rows['美金 (USD)'] && data.rows['新加坡幣 (SGD)']) {
-          // 選取較新的 updatedAt
+          data.isLive = false;
+          data.source = '雲端存檔';
           if (!bestData || (data.updatedAt && (!bestData.updatedAt || new Date(data.updatedAt) > new Date(bestData.updatedAt)))) {
             bestData = data;
           }
@@ -958,7 +1042,7 @@ async function loadRates(manual = false) {
   if (text) text.innerText = '同步中…';
   if (btn) btn.disabled = true;
 
-  setStatus('loading', '正在同步最新牌價…');
+  setStatus('loading', '正在連線滙豐官網同步牌價…');
 
   const previousTime = currentData ? currentData.time : null;
   let data = await fetchRatesFromNetwork();
@@ -966,6 +1050,7 @@ async function loadRates(manual = false) {
   // 若快照比網路回應更即時，採用最新者
   if (SNAP.updatedAt && (!data || (data.updatedAt && new Date(SNAP.updatedAt) > new Date(data.updatedAt)))) {
     data = clone(SNAP);
+    data.source = '內建快照';
   }
 
   const checkTime = new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -973,7 +1058,10 @@ async function loadRates(manual = false) {
   if (data) {
     const isNewer = previousTime && data.time !== previousTime;
     currentData = data;
-    setStatus('live', `已同步滙豐牌價（牌價時間：${data.time}）<span class="last-check-badge">最後檢查 ${checkTime}</span>`);
+    const sourceClass = data.isLive ? 'source-badge' : (data.source === '內建快照' ? 'source-badge snap' : 'source-badge cloud');
+    const sourceLabel = data.source || (data.isLive ? '官網即時' : '雲端存檔');
+
+    setStatus('live', `已同步滙豐牌價（牌價時間：${data.time}）<span class="${sourceClass}">${sourceLabel}</span><span class="last-check-badge">最後檢查 ${checkTime}</span>`);
     applyDataToInputs();
     renderTable();
     calc();
@@ -981,19 +1069,22 @@ async function loadRates(manual = false) {
     if (manual) {
       if (isNewer) {
         showToast(`🎉 成功更新至最新牌價！（牌價時間：${data.time}）`);
+      } else if (data.isLive) {
+        showToast(`✓ 已連線滙豐官網，確認目前最新牌價維持在 ${data.time}（牌價無變動）`);
       } else {
-        showToast(`✓ 已連線確認為最新牌價（牌價時間：${data.time}）`);
+        showToast(`✓ 已連線確認存檔紀錄（牌價時間：${data.time}）`);
       }
     }
   } else {
     // 備援：使用內建快照
     if (!currentData) {
       currentData = clone(SNAP);
+      currentData.source = '內建快照';
       applyDataToInputs();
       renderTable();
       calc();
     }
-    setStatus('stale', `使用快照牌價（牌價時間：${SNAP.time}）<span class="last-check-badge">最後檢查 ${checkTime}</span>`);
+    setStatus('stale', `使用快照牌價（牌價時間：${SNAP.time}）<span class="source-badge snap">內建快照</span><span class="last-check-badge">最後檢查 ${checkTime}</span>`);
     if (manual) {
       showToast('⚠️ 網路同步失敗，目前顯示內建快照牌價');
     }

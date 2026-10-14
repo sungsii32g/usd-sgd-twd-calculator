@@ -1,0 +1,10 @@
+{
+  "name": "usd-sgd-twd-calculator",
+  "version": "1.0.0",
+  "description": "USD→SGD 換匯路徑智能試算 (滙豐台灣即期牌價)",
+  "scripts": {
+    "fetch-rates": "node scripts/fetch_rates.js"
+  },
+  "author": "sungsii32g",
+  "license": "MIT"
+}
